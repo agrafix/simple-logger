@@ -1,0 +1,23 @@
+name: simple-logger
+version: 0.0.1
+synopsis: A very simple but efficient logging framework
+maintainer: Alexander Thiemann <mail@athiemann.net>
+license: MIT
+github: agrafix/simple-logger
+extra-source-files:
+  - README.md
+  - package.yaml
+
+ghc-options: -Wall
+
+dependencies:
+  - base >= 4.8 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+    - fast-logger
+    - text
+    - mtl
+  exposed-modules:
+    - Control.Logger.Simple

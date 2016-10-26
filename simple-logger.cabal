@@ -3,7 +3,7 @@
 -- see: https://github.com/sol/hpack
 
 name:           simple-logger
-version:        0.0.1
+version:        0.0.2
 synopsis:       A very simple but efficient logging framework
 homepage:       https://github.com/agrafix/simple-logger#readme
 bug-reports:    https://github.com/agrafix/simple-logger/issues
@@ -16,6 +16,7 @@ cabal-version:  >= 1.10
 extra-source-files:
     package.yaml
     README.md
+    stack.yaml
 
 source-repository head
   type: git

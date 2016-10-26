@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Control.Logger.Simple
@@ -18,7 +19,10 @@ import System.IO.Unsafe
 import System.Log.FastLogger
 import qualified Data.Text as T
 import qualified Data.Traversable as T
+#if MIN_VERSION_base(4,9,0)
+#else
 import qualified GHC.SrcLoc as GHC
+#endif
 import qualified GHC.Stack as GHC
 
 data Loggers
@@ -64,7 +68,7 @@ logWarn = doLog LogWarn
 logError :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logError = doLog LogError
 
--- | Log on error level and calls 'fail'
+-- | Log on error level and call 'fail'
 logFail :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m a
 logFail t =
     do doLog LogError t
@@ -147,7 +151,9 @@ withGlobalLogging lc f =
                             }
                     newFastLogger (LogFile spec defaultBufSize)
              stderrLogger <-
-                 if lc_stderr lc then Just <$> newFastLogger (LogStderr defaultBufSize) else pure Nothing
+                 if lc_stderr lc
+                 then Just <$> newFastLogger (LogStderr defaultBufSize)
+                 else pure Nothing
              tc <- newTimeCache timeFormat
              let lgrs = Loggers fileLogger stderrLogger tc
              writeIORef loggers lgrs

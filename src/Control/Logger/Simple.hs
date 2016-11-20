@@ -51,38 +51,38 @@ showText :: Show a => a -> T.Text
 showText = T.pack . show
 
 logTrace :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logTrace = doLog LogTrace
+logTrace = doLog LogTrace ?callStack
 
 logDebug :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logDebug = doLog LogDebug
+logDebug = doLog LogDebug ?callStack
 
 logInfo :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logInfo = doLog LogInfo
+logInfo = doLog LogInfo ?callStack
 
 logNote :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logNote = doLog LogNote
+logNote = doLog LogNote ?callStack
 
 logWarn :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logWarn = doLog LogWarn
+logWarn = doLog LogWarn ?callStack
 
 logError :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logError = doLog LogError
+logError = doLog LogError ?callStack
 
 -- | Log on error level and call 'fail'
 logFail :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m a
 logFail t =
-    do doLog LogError t
+    do doLog LogError ?callStack t
        fail (T.unpack t)
 
-doLog :: (?callStack :: GHC.CallStack) => MonadIO m => LogLevel -> T.Text -> m ()
-doLog ll txt =
+doLog :: MonadIO m => LogLevel -> GHC.CallStack -> T.Text -> m ()
+doLog ll cs txt =
     liftIO $
     readIORef logLevel >>= \logLim ->
     when (ll >= logLim) $
     do lgrs <- readIORef loggers
        time <- l_timeCache lgrs
        let loc =
-               case GHC.getCallStack ?callStack of
+               case GHC.getCallStack cs of
                    ((_, l):_) ->
                        GHC.srcLocFile l <> ":" <> show (GHC.srcLocStartLine l)
                    _ -> "unknown"

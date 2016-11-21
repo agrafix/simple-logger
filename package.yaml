@@ -1,6 +1,8 @@
 name: simple-logger
-version: 0.0.2
+version: 0.0.3
 synopsis: A very simple but efficient logging framework
+description: A very simple but efficient logging framework
+category: Logging
 maintainer: Alexander Thiemann <mail@athiemann.net>
 license: MIT
 github: agrafix/simple-logger

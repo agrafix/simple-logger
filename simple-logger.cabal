@@ -3,7 +3,7 @@
 -- see: https://github.com/sol/hpack
 
 name:           simple-logger
-version:        0.0.3
+version:        0.0.4
 synopsis:       A very simple but efficient logging framework
 description:    A very simple but efficient logging framework
 category:       Logging

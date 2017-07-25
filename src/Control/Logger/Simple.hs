@@ -6,6 +6,7 @@ module Control.Logger.Simple
     , setLogLevel, LogLevel(..)
     , logTrace, logDebug, logInfo, logNote, logWarn, logError
     , logFail
+    , pureTrace, pureDebug, pureInfo, pureNote, pureWarn, pureError
     , showText, (<>)
     )
 where
@@ -27,15 +28,15 @@ import qualified GHC.Stack as GHC
 
 data Loggers
     = Loggers
-    { l_file :: Maybe (FastLogger, IO ())
-    , l_stderr :: Maybe (FastLogger, IO ())
-    , l_timeCache :: IO FormattedTime
+    { l_file :: !(Maybe (FastLogger, IO ()))
+    , l_stderr :: !(Maybe (FastLogger, IO ()))
+    , l_timeCache :: !(IO FormattedTime)
     }
 
 data LogConfig
     = LogConfig
-    { lc_file :: Maybe FilePath
-    , lc_stderr :: Bool
+    { lc_file :: !(Maybe FilePath)
+    , lc_stderr :: !Bool
     }
 
 data LogLevel
@@ -50,21 +51,27 @@ data LogLevel
 showText :: Show a => a -> T.Text
 showText = T.pack . show
 
+-- | Log with 'LogTrace' log level
 logTrace :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logTrace = doLog LogTrace ?callStack
 
+-- | Log with 'LogDebug' log level
 logDebug :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logDebug = doLog LogDebug ?callStack
 
+-- | Log with 'LogInfo' log level
 logInfo :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logInfo = doLog LogInfo ?callStack
 
+-- | Log with 'LogNote' log level
 logNote :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logNote = doLog LogNote ?callStack
 
+-- | Log with 'LogWarn' log level
 logWarn :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logWarn = doLog LogWarn ?callStack
 
+-- | Log with 'LogError' log level
 logError :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logError = doLog LogError ?callStack
 
@@ -73,6 +80,34 @@ logFail :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m a
 logFail t =
     do doLog LogError ?callStack t
        fail (T.unpack t)
+
+-- | Log with 'LogTrace' level when the given expression is evaluated
+pureTrace :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureTrace = doPureLog LogTrace ?callStack
+
+-- | Log with 'LogDebug' level when the given expression is evaluated
+pureDebug :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureDebug = doPureLog LogDebug ?callStack
+
+-- | Log with 'LogInfo' level when the given expression is evaluated
+pureInfo :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureInfo = doPureLog LogInfo ?callStack
+
+-- | Log with 'LogNote' level when the given expression is evaluated
+pureNote :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureNote = doPureLog LogNote ?callStack
+
+-- | Log with 'LogWarn' level when the given expression is evaluated
+pureWarn :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureWarn = doPureLog LogWarn ?callStack
+
+-- | Log with 'LogError' level when the given expression is evaluated
+pureError :: (?callStack :: GHC.CallStack) => T.Text -> a -> a
+pureError = doPureLog LogError ?callStack
+
+doPureLog ::LogLevel -> GHC.CallStack -> T.Text -> a -> a
+doPureLog ll cs txt expr =
+    unsafePerformIO (doLog ll cs txt) `seq` expr
 
 doLog :: MonadIO m => LogLevel -> GHC.CallStack -> T.Text -> m ()
 doLog ll cs txt =

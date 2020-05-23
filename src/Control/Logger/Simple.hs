@@ -15,7 +15,6 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Data.IORef
-import Data.Monoid
 import System.IO.Unsafe
 import System.Log.FastLogger
 import qualified Data.Text as T
@@ -76,7 +75,7 @@ logError :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
 logError = doLog LogError ?callStack
 
 -- | Log on error level and call 'fail'
-logFail :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m a
+logFail :: (?callStack :: GHC.CallStack, MonadFail m) => MonadIO m => T.Text -> m a
 logFail t =
     do doLog LogError ?callStack t
        fail (T.unpack t)
@@ -173,8 +172,8 @@ withGlobalLogging lc f =
     bracket initLogger flushLogger (const f)
     where
       flushLogger (Loggers a b _) =
-          do forM_ a $ \(_, flush) -> flush
-             forM_ b $ \(_, flush) -> flush
+          do forM_ a snd
+             forM_ b snd
       initLogger =
           do fileLogger <-
                  flip T.mapM (lc_file lc) $ \fp ->

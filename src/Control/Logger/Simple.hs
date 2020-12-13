@@ -8,6 +8,7 @@ module Control.Logger.Simple
     , logFail
     , pureTrace, pureDebug, pureInfo, pureNote, pureWarn, pureError
     , showText, (<>)
+    , monadLoggerAdapter, runSimpleLoggingT
     )
 where
 
@@ -24,6 +25,7 @@ import qualified Data.Traversable as T
 import qualified GHC.SrcLoc as GHC
 #endif
 import qualified GHC.Stack as GHC
+import qualified Control.Monad.Logger as ML
 
 data Loggers
     = Loggers
@@ -52,32 +54,32 @@ showText = T.pack . show
 
 -- | Log with 'LogTrace' log level
 logTrace :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logTrace = doLog LogTrace ?callStack
+logTrace = doLogCs LogTrace ?callStack . toLogStr
 
 -- | Log with 'LogDebug' log level
 logDebug :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logDebug = doLog LogDebug ?callStack
+logDebug = doLogCs LogDebug ?callStack . toLogStr
 
 -- | Log with 'LogInfo' log level
 logInfo :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logInfo = doLog LogInfo ?callStack
+logInfo = doLogCs LogInfo ?callStack . toLogStr
 
 -- | Log with 'LogNote' log level
 logNote :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logNote = doLog LogNote ?callStack
+logNote = doLogCs LogNote ?callStack . toLogStr
 
 -- | Log with 'LogWarn' log level
 logWarn :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logWarn = doLog LogWarn ?callStack
+logWarn = doLogCs LogWarn ?callStack . toLogStr
 
 -- | Log with 'LogError' log level
 logError :: (?callStack :: GHC.CallStack) => MonadIO m => T.Text -> m ()
-logError = doLog LogError ?callStack
+logError = doLogCs LogError ?callStack . toLogStr
 
 -- | Log on error level and call 'fail'
 logFail :: (?callStack :: GHC.CallStack, MonadFail m) => MonadIO m => T.Text -> m a
 logFail t =
-    do doLog LogError ?callStack t
+    do doLogCs LogError ?callStack (toLogStr t)
        fail (T.unpack t)
 
 -- | Log with 'LogTrace' level when the given expression is evaluated
@@ -106,21 +108,17 @@ pureError = doPureLog LogError ?callStack
 
 doPureLog ::LogLevel -> GHC.CallStack -> T.Text -> a -> a
 doPureLog ll cs txt expr =
-    unsafePerformIO (doLog ll cs txt) `seq` expr
+    unsafePerformIO (doLogCs ll cs $ toLogStr txt) `seq` expr
 
-doLog :: MonadIO m => LogLevel -> GHC.CallStack -> T.Text -> m ()
-doLog ll cs txt =
+
+doLog :: MonadIO m => LogLevel -> LogStr -> LogStr -> m ()
+doLog ll loc txt =
     liftIO $
     readIORef logLevel >>= \logLim ->
     when (ll >= logLim) $
     do lgrs <- readIORef loggers
        time <- l_timeCache lgrs
-       let loc =
-               case GHC.getCallStack cs of
-                   ((_, l):_) ->
-                       GHC.srcLocFile l <> ":" <> show (GHC.srcLocStartLine l)
-                   _ -> "unknown"
-           msg =
+       let msg =
                "[" <> renderLevel <> " "
                <> toLogStr time
                <> " "
@@ -149,6 +147,15 @@ doLog ll cs txt =
               LogNote -> "\o33[1;32m"
               LogWarn -> "\o33[0;33m"
               LogError -> "\o33[1;31m"
+
+doLogCs :: MonadIO m => LogLevel -> GHC.CallStack -> LogStr -> m ()
+doLogCs ll cs txt =
+    do let loc =
+             case GHC.getCallStack cs of
+               ((_, l):_) ->
+                 GHC.srcLocFile l <> ":" <> show (GHC.srcLocStartLine l)
+               _ -> "unknown"
+       doLog ll (toLogStr loc) txt
 
 loggers :: IORef Loggers
 loggers =
@@ -195,3 +202,22 @@ withGlobalLogging lc f =
 
 timeFormat :: TimeFormat
 timeFormat = "%Y-%m-%d %T %z"
+
+-- | An adapter to implemend `MonadLogger` instances for custom monad stacks
+monadLoggerAdapter :: (ML.ToLogStr msg, MonadIO m) => ML.Loc -> ML.LogSource -> ML.LogLevel -> msg -> m ()
+monadLoggerAdapter loc _ lvl msg =
+  doLog level location (toLogStr msg)
+  where
+    location =
+      toLogStr $ ML.loc_filename loc <> ":" <> show (fst (ML.loc_start loc))
+    level =
+      case lvl of
+        ML.LevelDebug -> LogDebug
+        ML.LevelInfo -> LogInfo
+        ML.LevelWarn -> LogWarn
+        ML.LevelError -> LogError
+        ML.LevelOther _ -> LogTrace
+
+-- | Runs a logging transformer stack using the simple logger as backend
+runSimpleLoggingT :: MonadIO m => ML.LoggingT m a -> m a
+runSimpleLoggingT = flip ML.runLoggingT monadLoggerAdapter

@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b5edd8600dd9e617fd590c0555243903dbd58f9f67496b265b3947d5e0616faf
+-- hash: ce87da47c5034f1b6490c7819839f05365997167fca44c7a7541a88fbdc6dde7
 
 name:           simple-logger
-version:        0.1.0
+version:        0.1.1
 synopsis:       A very simple but efficient logging framework
 description:    A very simple but efficient logging framework
 category:       Logging
@@ -33,6 +33,7 @@ library
   build-depends:
       base >=4.9 && <5
     , fast-logger
+    , monad-logger
     , mtl
     , text
   exposed-modules:

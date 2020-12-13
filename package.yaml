@@ -1,5 +1,5 @@
 name: simple-logger
-version: 0.1.0
+version: 0.1.1
 synopsis: A very simple but efficient logging framework
 description: A very simple but efficient logging framework
 category: Logging
@@ -15,6 +15,7 @@ ghc-options: -Wall
 
 dependencies:
   - base >= 4.9 && < 5
+  - monad-logger
 
 library:
   source-dirs: src

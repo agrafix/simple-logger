@@ -15,6 +15,7 @@ where
 import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
+import Data.Default
 import Data.IORef
 import System.IO.Unsafe
 import System.Log.FastLogger
@@ -39,6 +40,9 @@ data LogConfig
     { lc_file :: !(Maybe FilePath)
     , lc_stderr :: !Bool
     }
+
+instance Default LogConfig where
+  def = LogConfig Nothing True
 
 data LogLevel
     = LogTrace

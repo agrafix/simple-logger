@@ -36,6 +36,7 @@ library
     , monad-logger
     , mtl
     , text
+    , data-default
   exposed-modules:
       Control.Logger.Simple
   other-modules:

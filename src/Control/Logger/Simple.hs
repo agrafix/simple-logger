@@ -9,6 +9,7 @@ module Control.Logger.Simple
     , pureTrace, pureDebug, pureInfo, pureNote, pureWarn, pureError
     , showText, (<>)
     , monadLoggerAdapter, runSimpleLoggingT
+    , initLogger, flushLogger
     )
 where
 
@@ -175,30 +176,32 @@ setLogLevel = atomicWriteIORef logLevel
 
 -- | Setup global logging. Wrap your 'main' function with this.
 withGlobalLogging :: LogConfig -> IO a -> IO a
-withGlobalLogging lc f =
-    bracket initLogger flushLogger (const f)
-    where
-      flushLogger (Loggers a b _) =
-          do forM_ a snd
-             forM_ b snd
-      initLogger =
-          do fileLogger <-
-                 flip T.mapM (lc_file lc) $ \fp ->
-                 do let spec =
-                            FileLogSpec
-                            { log_file = fp
-                            , log_file_size = 1024 * 1024 * 50
-                            , log_backup_number = 5
-                            }
-                    newFastLogger (LogFile spec defaultBufSize)
-             stderrLogger <-
-                 if lc_stderr lc
-                 then Just <$> newFastLogger (LogStderr defaultBufSize)
-                 else pure Nothing
-             tc <- newTimeCache timeFormat
-             let lgrs = Loggers fileLogger stderrLogger tc
-             writeIORef loggers lgrs
-             pure lgrs
+withGlobalLogging lc f = bracket (initLogger lc) flushLogger (const f)
+
+flushLogger :: Loggers -> IO ()
+flushLogger (Loggers a b _) =
+    do forM_ a snd
+       forM_ b snd
+
+initLogger :: LogConfig -> IO Loggers
+initLogger lc =
+    do fileLogger <-
+            flip T.mapM (lc_file lc) $ \fp ->
+               do let spec =
+                        FileLogSpec
+                        { log_file = fp
+                        , log_file_size = 1024 * 1024 * 50
+                        , log_backup_number = 5
+                        }
+                  newFastLogger (LogFile spec defaultBufSize)
+       stderrLogger <-
+           if lc_stderr lc
+           then Just <$> newFastLogger (LogStderr defaultBufSize)
+           else pure Nothing
+       tc <- newTimeCache timeFormat
+       let lgrs = Loggers fileLogger stderrLogger tc
+       writeIORef loggers lgrs
+       pure lgrs
 
 timeFormat :: TimeFormat
 timeFormat = "%Y-%m-%d %T %z"

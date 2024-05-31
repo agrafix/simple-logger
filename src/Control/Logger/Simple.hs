@@ -9,7 +9,7 @@ module Control.Logger.Simple
     , pureTrace, pureDebug, pureInfo, pureNote, pureWarn, pureError
     , showText, (<>)
     , monadLoggerAdapter, runSimpleLoggingT
-    , initLogger, flushLogger
+    , Loggers, initLogger, flushLogger
     )
 where
 
